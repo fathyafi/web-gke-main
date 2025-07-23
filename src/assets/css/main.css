@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Atur background untuk seluruh aplikasi */
+body {
+  background-image: url('@/assets/background.png');
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  margin: 0;  /* Menghapus margin default */
+}
