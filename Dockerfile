@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN yarn install --frozen-lockfile
 COPY . .
-ENV VUE_APP_SERVICE_API=
+ENV VUE_APP_SERVICE_API=http://backend-service1:8080
 RUN yarn build
 
 # Production Stage - Node.js Serve Static

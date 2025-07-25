@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: frontend-app
-        image: fathyafi/fe-app2:latest
+        image: fathyafi/fe-app3:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3000

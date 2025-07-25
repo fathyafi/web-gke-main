@@ -1,0 +1,6 @@
+projectKey=fe-app-sq
+serverUrl=https://sonar3am.42n.fun
+serverVersion=25.7.0.110598
+dashboardUrl=https://sonar3am.42n.fun/dashboard?id=fe-app-sq
+ceTaskId=c07122a3-b361-497c-b46b-0efa695dab8d
+ceTaskUrl=https://sonar3am.42n.fun/api/ce/task?id=c07122a3-b361-497c-b46b-0efa695dab8d
