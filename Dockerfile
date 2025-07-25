@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN yarn install --frozen-lockfile
 COPY . .
-ENV VUE_APP_SERVICE_API=http://backend-service1:8080
+ENV VUE_APP_SERVICE_API=https://backend-route1-fathya-app.apps.threeam.finalproject.cloud
 RUN yarn build
 
 # Production Stage - Node.js Serve Static
