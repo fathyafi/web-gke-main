@@ -1,10 +1,10 @@
-# Build Stage dari tito
+# Build Stage 
 FROM node:20-alpine AS build-stage
 WORKDIR /app
 COPY package*.json ./
 RUN yarn install --frozen-lockfile
 COPY . .
-ENV VUE_APP_SERVICE_API=https://backend-route1-fathya-app.apps.threeam.finalproject.cloud
+ENV VUE_APP_SERVICE_API=https://backend-route-fathyafi-dev.apps.rm1.0a51.p1.openshiftapps.com
 RUN yarn build
 
 # Production Stage - Node.js Serve Static
