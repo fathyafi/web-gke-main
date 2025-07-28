@@ -7,12 +7,16 @@ pipeline {
     }
 
     environment {
-        REGISTRY_URL                  = 'docker.io'
-        FRONTEND_IMAGE                = 'fathyafi/fe-app-redhat:latest'
-        OPENSHIFT_PROJECT             = 'fathyafi-dev'
-        SONAR_QUBE_SERVER_URL         = 'https://sonar3am.42n.fun'
-        SONAR_QUBE_PROJECT_KEY        = 'fe-app-sq-redhat'
-        SONAR_QUBE_PROJECT_NAME       = 'Project SonarQube Frontend RedHat'
+        PROJECT_ID             = 'am-finalproject'
+        REGION                 = 'asia-southeast2'
+        CLUSTER_NAME           = 'finalproject-cluster'
+        IMAGE_NAME             = 'frontend-app'
+        REPO_NAME              = 'fathya-frontend-repo'
+        ARTIFACT_REGISTRY_URL  = 'asia-southeast2-docker.pkg.dev'
+        IMAGE_URI              = "${ARTIFACT_REGISTRY_URL}/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest"
+        SONAR_QUBE_SERVER_URL  = 'https://sonar3am.42n.fun'
+        SONAR_QUBE_PROJECT_KEY = 'fe-app-sq-gke'
+        SONAR_QUBE_PROJECT_NAME = 'Project SonarQube Frontend GKE'
     }
 
     stages {
@@ -20,21 +24,17 @@ pipeline {
             steps {
                 deleteDir()
                 dir('frontend') {
-                    git branch: 'main', url: 'https://github.com/fathyafi/web-redhat-main.git'
+                    git branch: 'main', url: 'https://github.com/fathyafi/web-gke-main.git'
                 }
-                echo 'Repository checked out successfully.'
             }
         }
 
-        stage('Unit Test Frontend') {
+        stage('Unit Test') {
             steps {
                 dir('frontend') {
-                    withCredentials([file(credentialsId: 'env-frontend-redhat', variable: 'env_file_redhat')]) {
+                    withCredentials([file(credentialsId: 'env-frontend-gke', variable: 'ENV_FILE')]) {
                         sh '''
-                            echo "env_file_redhat is: $env_file_redhat"
-                            ls -l "$env_file_redhat"
-                            cat "$env_file_redhat"
-                            cp "$env_file_redhat" .env
+                            cp "$ENV_FILE" .env
                             npm install
                             npm test
                             rm .env
@@ -48,7 +48,6 @@ pipeline {
             steps {
                 dir('frontend') {
                     script {
-                        // Get SonarScanner tool path - ini harus ada di dalam steps
                         def scannerHome = tool 'SonarScanner'
                         withSonarQubeEnv('SonarQube') {
                             withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
@@ -61,53 +60,61 @@ pipeline {
                                     -Dsonar.sources=. \
                                     -Dsonar.exclusions=node_modules/**,dist/**,build/**,coverage/**
                                 """
-                                echo 'SonarQube analysis completed.'
                             }
                         }
                     }
                 }
             }
         }
-        
-        stage('Build Image Frontend') {
+
+        stage('Build Docker Image') {
             steps {
                 dir('frontend') {
-                    sh '''
-                    npm run build
-                    docker build --no-cache -t $FRONTEND_IMAGE .
-                '''
-                }
-            }
-        }
+                    withCredentials([file(credentialsId: 'env-frontend-gke', variable: 'ENV_FILE')]) {
+                        sh '''
+                            cp "$ENV_FILE" .env
+                            export $(grep -v '^#' .env | xargs)
 
-        stage('Push Docker Image to Docker Hub') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        sh """
-                            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
-                            docker push ${FRONTEND_IMAGE}
-                        """
-                        echo 'Docker image pushed to Docker Hub.'
+                            docker build --no-cache \
+                                --build-arg VUE_APP_SERVICE_API=$VUE_APP_SERVICE_API \
+                                --build-arg VUE_APP_FIREBASE_API_KEY=$VUE_APP_FIREBASE_API_KEY \
+                                --build-arg VUE_APP_FIREBASE_AUTH_DOMAIN=$VUE_APP_FIREBASE_AUTH_DOMAIN \
+                                --build-arg VUE_APP_FIREBASE_PROJECT_ID=$VUE_APP_FIREBASE_PROJECT_ID \
+                                --build-arg VUE_APP_FIREBASE_STORAGE_BUCKET=$VUE_APP_FIREBASE_STORAGE_BUCKET \
+                                --build-arg VUE_APP_FIREBASE_MESSAGING_SENDER_ID=$VUE_APP_FIREBASE_MESSAGING_SENDER_ID \
+                                --build-arg VUE_APP_FIREBASE_APP_ID=$VUE_APP_FIREBASE_APP_ID \
+                                --build-arg VUE_APP_FIREBASE_MEASUREMENT_ID=$VUE_APP_FIREBASE_MEASUREMENT_ID \
+                                -t $IMAGE_URI .
+                            rm .env
+                        '''
                     }
                 }
             }
         }
 
-        stage('Deploy to OpenShift (RedHat)') {
+        stage('Push to Artifact Registry') {
             steps {
-                withCredentials([string(credentialsId: 'openshift-redhat-token',variable: 'OC_TOKEN')]) {
-                sh '''
-                    oc login --token=$OC_TOKEN --server=https://api.rm1.0a51.p1.openshiftapps.com:6443
-                    oc project $OPENSHIFT_PROJECT
-                '''
-                dir('frontend/openshift') {
-                    sh "oc apply -f deployment.yml"
-                    sh "oc apply -f service.yml"
-                    sh "oc apply -f route.yml"
-                    sh "oc rollout restart deployment/frontend-app"
+                withCredentials([file(credentialsId: 'gcp-sa-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    sh '''
+                        gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+                        gcloud auth configure-docker ${ARTIFACT_REGISTRY_URL} --quiet
+                        docker push $IMAGE_URI
+                    '''
                 }
-                echo "Application deployed to OpenShift."
+            }
+        }
+
+        stage('Deploy to GKE') {
+            steps {
+                withCredentials([file(credentialsId: 'gcp-sa-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    sh '''
+                        gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+                        gcloud config set project $PROJECT_ID
+                        gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION
+
+                        kubectl set image deployment/frontend-app frontend-app=$IMAGE_URI --record
+                        kubectl rollout restart deployment/frontend-app
+                    '''
                 }
             }
         }
@@ -118,7 +125,7 @@ pipeline {
             echo '✅ Pipeline finished successfully!'
         }
         failure {
-            echo '❌ Pipeline failed! Check the logs for details.'
+            echo '❌ Pipeline failed. Please check the logs.'
         }
     }
 }
