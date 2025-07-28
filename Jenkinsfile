@@ -10,10 +10,11 @@ pipeline {
         PROJECT_ID             = 'am-finalproject'
         REGION                 = 'asia-southeast2'
         CLUSTER_NAME           = 'finalproject-cluster'
-        IMAGE_NAME             = 'frontend-app'
+        IMAGE_NAME             = 'fe-app'
+        IMAGE_TAG              = 'latest'
         REPO_NAME              = 'fathya-frontend-repo'
         ARTIFACT_REGISTRY_URL  = 'asia-southeast2-docker.pkg.dev'
-        IMAGE_URI              = "${ARTIFACT_REGISTRY_URL}/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest"
+        FULL_IMAGE_NAME        = "${ARTIFACT_REGISTRY_URL}/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${IMAGE_TAG}"
         SONAR_QUBE_SERVER_URL  = 'https://sonar3am.42n.fun'
         SONAR_QUBE_PROJECT_KEY = 'fe-app-sq-gke'
         SONAR_QUBE_PROJECT_NAME = 'Project SonarQube Frontend GKE'
@@ -84,7 +85,7 @@ pipeline {
                                 --build-arg VUE_APP_FIREBASE_MESSAGING_SENDER_ID=$VUE_APP_FIREBASE_MESSAGING_SENDER_ID \
                                 --build-arg VUE_APP_FIREBASE_APP_ID=$VUE_APP_FIREBASE_APP_ID \
                                 --build-arg VUE_APP_FIREBASE_MEASUREMENT_ID=$VUE_APP_FIREBASE_MEASUREMENT_ID \
-                                -t $IMAGE_URI .
+                                -t $FULL_IMAGE_NAME .
                             rm .env
                         '''
                     }
@@ -98,7 +99,7 @@ pipeline {
                     sh '''
                         gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
                         gcloud auth configure-docker ${ARTIFACT_REGISTRY_URL} --quiet
-                        docker push $IMAGE_URI
+                        docker push $FULL_IMAGE_NAME
                     '''
                 }
             }
