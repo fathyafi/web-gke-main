@@ -94,7 +94,7 @@ pipeline {
 
         stage('Push to Artifact Registry') {
             steps {
-                withCredentials([file(credentialsId: 'gcp-sa-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                withCredentials([file(credentialsId: 'gcp-service-account-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
                     sh '''
                         gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
                         gcloud auth configure-docker ${ARTIFACT_REGISTRY_URL} --quiet
@@ -106,13 +106,15 @@ pipeline {
 
         stage('Deploy to GKE') {
             steps {
-                withCredentials([file(credentialsId: 'gcp-sa-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                withCredentials([file(credentialsId: 'gcp-service-account-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
                     sh '''
                         gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
                         gcloud config set project $PROJECT_ID
                         gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION
 
-                        kubectl set image deployment/frontend-app frontend-app=$IMAGE_URI --record
+                        kubectl apply -f frontend/k8s/deployment.yml
+                        kubectl apply -f frontend/k8s/service.yml
+                        kubectl apply -f frontend/k8s/hpa.yml
                         kubectl rollout restart deployment/frontend-app
                     '''
                 }
