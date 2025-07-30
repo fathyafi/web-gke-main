@@ -36,7 +36,7 @@ RUN yarn global add serve
 # Copy build result from build-stage
 COPY --from=build-stage /app/dist /app/dist
 
-EXPOSE 3000
+EXPOSE 8080
 
 # Jalankan 'serve' untuk hasil build di folder /app/dist
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["serve", "-s", "dist", "-l", "8080"]
