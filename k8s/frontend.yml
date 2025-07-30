@@ -15,23 +15,21 @@ spec:
       containers:
         - name: frontend-app
           image: asia-southeast2-docker.pkg.dev/am-finalproject/fathya-frontend-repo/fe-app:latest
-          imagePullPolicy: Always
           ports:
             - containerPort: 8080
-
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend-service
+  name: frontend-app
 spec:
   selector:
     app: frontend-app
   ports:
     - protocol: TCP
-      port: 8080
-      targetPort: 8080
-  type: ClusterIP
+      port: 8080 
+      targetPort: 8080 
+  type: ClusterIP 
 
 ---
 apiVersion: traefik.io/v1alpha1
@@ -46,5 +44,5 @@ spec:
     - match: Host(`frontend.42n.fun`)
       kind: Rule
       services:
-        - name: frontend-service
+        - name: frontend-app
           port: 8080

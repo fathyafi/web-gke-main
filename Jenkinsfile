@@ -57,9 +57,9 @@ pipeline {
                                     -Dsonar.projectKey=${SONAR_QUBE_PROJECT_KEY} \
                                     -Dsonar.projectName="${SONAR_QUBE_PROJECT_NAME}" \
                                     -Dsonar.host.url=${SONAR_QUBE_SERVER_URL} \
-                                    -Dsonar.login=${SONAR_TOKEN} \
-                                    -Dsonar.sources=. \
-                                    -Dsonar.exclusions=node_modules/**,dist/**,build/**,coverage/**
+                                    -Dsonar.token=${SONAR_TOKEN} 
+                                    // -Dsonar.sources=. \
+                                    // -Dsonar.exclusions=node_modules/**,dist/**,build/**,coverage/**
                                 """
                             }
                         }
@@ -113,8 +113,7 @@ pipeline {
                         gcloud config set project $PROJECT_ID
                         gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION
 
-                        kubectl apply -f frontend/k8s/deployment.yml
-                        kubectl apply -f frontend/k8s/service.yml
+                        kubectl apply -f frontend/k8s/frontend.yml
                         kubectl apply -f frontend/k8s/hpa.yml
                         kubectl rollout restart deployment/frontend-app
                     '''
